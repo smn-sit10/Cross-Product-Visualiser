@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cross Product Visualizer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&family=Syne:wght@400;700;800&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --border: #1e1e2e;
+    --a-color: #38bdf8;
+    --b-color: #f472b6;
+    --axb-color: #a3e635;
+    --text: #e2e8f0;
+    --muted: #64748b;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px;
+  }
+
+  h1 {
+    font-size: clamp(1.4rem, 4vw, 2rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin-bottom: 4px;
+    background: linear-gradient(135deg, var(--a-color), var(--b-color), var(--axb-color));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .subtitle {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 20px;
+    width: 100%;
+    max-width: 1000px;
+  }
+
+  @media (max-width: 720px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+
+  canvas {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    width: 100%;
+    cursor: grab;
+    display: block;
+  }
+  canvas:active { cursor: grabbing; }
+
+  .panel {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+  }
+
+  .card h3 {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    margin-bottom: 12px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .vec-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .vec-label {
+    font-weight: 800;
+    font-size: 1.1rem;
+    width: 28px;
+    flex-shrink: 0;
+  }
+
+  .vec-label.a { color: var(--a-color); }
+  .vec-label.b { color: var(--b-color); }
+  .vec-label.axb { color: var(--axb-color); font-size: 0.85rem; }
+
+  .sliders {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+  }
+
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .axis-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    width: 12px;
+  }
+
+  input[type=range] {
+    flex: 1;
+    height: 4px;
+    -webkit-appearance: none;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+  }
+
+  input[type=range].a::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--a-color);
+    cursor: pointer;
+  }
+  input[type=range].b::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--b-color);
+    cursor: pointer;
+  }
+
+  .val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    width: 28px;
+    text-align: right;
+    color: var(--muted);
+  }
+
+  .result-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .result-item {
+    background: #0a0a0f;
+    border-radius: 8px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+  }
+
+  .result-item .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  .result-item .value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
+  .result-item.axb-item {
+    grid-column: 1 / -1;
+    border-color: #1e2e10;
+  }
+
+  .formula-box {
+    background: #0a0a0f;
+    border-radius: 8px;
+    padding: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    line-height: 1.8;
+    border: 1px solid var(--border);
+  }
+
+  .formula-box .line { color: var(--muted); }
+  .formula-box .highlight { color: var(--axb-color); font-weight: 600; }
+
+  .insight {
+    background: linear-gradient(135deg, #0d1a0d, #0a1020);
+    border: 1px solid #1e3020;
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 0.78rem;
+    line-height: 1.6;
+    color: #94a3b8;
+  }
+
+  .insight strong { color: var(--axb-color); }
+
+  .drag-hint {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 6px;
+  }
+
+  .angle-bar {
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 4px;
+  }
+
+  .angle-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--a-color), var(--axb-color));
+    transition: width 0.1s;
+  }
+</style>
+</head>
+<body>
+
+<h1>Cross Product Visualiser</h1>
+<p class="subtitle">a × b = |a| |b| sin(θ) n̂</p>
+
+<div class="layout">
+  <div>
+    <canvas id="cv" width="600" height="500"></canvas>
+    <p class="drag-hint">🖱 drag to rotate · scroll to zoom</p>
+  </div>
+
+  <div class="panel">
+
+    <!-- Vector A sliders -->
+    <div class="card">
+      <h3>Vector Controls</h3>
+      <div class="vec-row">
+        <span class="vec-label a">a</span>
+        <div class="sliders">
+          <div class="slider-row">
+            <span class="axis-label">x</span>
+            <input type="range" class="a" id="ax" min="-5" max="5" step="0.1" value="3">
+            <span class="val" id="ax-v">3.0</span>
+          </div>
+          <div class="slider-row">
+            <span class="axis-label">y</span>
+            <input type="range" class="a" id="ay" min="-5" max="5" step="0.1" value="1">
+            <span class="val" id="ay-v">1.0</span>
+          </div>
+          <div class="slider-row">
+            <span class="axis-label">z</span>
+            <input type="range" class="a" id="az" min="-5" max="5" step="0.1" value="0">
+            <span class="val" id="az-v">0.0</span>
+          </div>
+        </div>
+      </div>
+      <div class="vec-row">
+        <span class="vec-label b">b</span>
+        <div class="sliders">
+          <div class="slider-row">
+            <span class="axis-label">x</span>
+            <input type="range" class="b" id="bx" min="-5" max="5" step="0.1" value="1">
+            <span class="val" id="bx-v">1.0</span>
+          </div>
+          <div class="slider-row">
+            <span class="axis-label">y</span>
+            <input type="range" class="b" id="by" min="-5" max="5" step="0.1" value="3">
+            <span class="val" id="by-v">3.0</span>
+          </div>
+          <div class="slider-row">
+            <span class="axis-label">z</span>
+            <input type="range" class="b" id="bz" min="-5" max="5" step="0.1" value="0">
+            <span class="val" id="bz-v">0.0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div class="card">
+      <h3>Results</h3>
+      <div class="result-grid">
+        <div class="result-item">
+          <div class="label">|a|</div>
+          <div class="value" style="color:var(--a-color)" id="r-mag-a">—</div>
+        </div>
+        <div class="result-item">
+          <div class="label">|b|</div>
+          <div class="value" style="color:var(--b-color)" id="r-mag-b">—</div>
+        </div>
+        <div class="result-item">
+          <div class="label">θ (angle)</div>
+          <div class="value" id="r-theta">—</div>
+        </div>
+        <div class="result-item">
+          <div class="label">|a×b| = Area</div>
+          <div class="value" style="color:var(--axb-color)" id="r-area">—</div>
+        </div>
+        <div class="result-item axb-item">
+          <div class="label" style="color:var(--axb-color)">a × b vector</div>
+          <div class="value" style="color:var(--axb-color)" id="r-axb">—</div>
+        </div>
+      </div>
+      <div style="margin-top:10px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:var(--muted);margin-bottom:4px">sin(θ) — cross product strength</div>
+        <div class="angle-bar"><div class="angle-fill" id="angle-fill" style="width:0%"></div></div>
+      </div>
+    </div>
+
+    <!-- Formula -->
+    <div class="card">
+      <h3>Calculation</h3>
+      <div class="formula-box" id="formula-box">
+        <div class="line">a×b = (ay·bz − az·by, </div>
+        <div class="line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; az·bx − ax·bz, </div>
+        <div class="line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ax·by − ay·bx)</div>
+        <div class="highlight" id="formula-result" style="margin-top:4px">= (?, ?, ?)</div>
+      </div>
+    </div>
+
+    <!-- Insight -->
+    <div class="insight" id="insight-box">
+      Move the sliders to explore how the cross product changes!
+    </div>
+
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('cv');
+const ctx = canvas.getContext('2d');
+
+// Camera state
+let rotX = 0.4, rotY = -0.6;
+let zoom = 80;
+let dragging = false, lastMX, lastMY;
+
+canvas.addEventListener('mousedown', e => { dragging = true; lastMX = e.clientX; lastMY = e.clientY; });
+window.addEventListener('mouseup', () => dragging = false);
+window.addEventListener('mousemove', e => {
+  if (!dragging) return;
+  rotY += (e.clientX - lastMX) * 0.01;
+  rotX += (e.clientY - lastMY) * 0.01;
+  lastMX = e.clientX; lastMY = e.clientY;
+  draw();
+});
+canvas.addEventListener('wheel', e => {
+  zoom = Math.max(40, Math.min(160, zoom - e.deltaY * 0.1));
+  draw();
+});
+
+// Touch support
+canvas.addEventListener('touchstart', e => { const t = e.touches[0]; lastMX = t.clientX; lastMY = t.clientY; });
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  const t = e.touches[0];
+  rotY += (t.clientX - lastMX) * 0.012;
+  rotX += (t.clientY - lastMY) * 0.012;
+  lastMX = t.clientX; lastMY = t.clientY;
+  draw();
+}, { passive: false });
+
+function getVecs() {
+  return {
+    a: [+document.getElementById('ax').value, +document.getElementById('ay').value, +document.getElementById('az').value],
+    b: [+document.getElementById('bx').value, +document.getElementById('by').value, +document.getElementById('bz').value],
+  };
+}
+
+function cross(a, b) {
+  return [
+    a[1]*b[2] - a[2]*b[1],
+    a[2]*b[0] - a[0]*b[2],
+    a[0]*b[1] - a[1]*b[0]
+  ];
+}
+
+function mag(v) { return Math.sqrt(v[0]**2 + v[1]**2 + v[2]**2); }
+function dot(a,b) { return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
+function norm(v) { const m = mag(v); return m < 1e-9 ? [0,0,0] : v.map(x=>x/m); }
+
+// 3D → 2D projection with rotation
+function project(v) {
+  // Rotate around Y
+  const cosY = Math.cos(rotY), sinY = Math.sin(rotY);
+  let x1 = v[0]*cosY + v[2]*sinY;
+  let y1 = v[1];
+  let z1 = -v[0]*sinY + v[2]*cosY;
+  // Rotate around X
+  const cosX = Math.cos(rotX), sinX = Math.sin(rotX);
+  let x2 = x1;
+  let y2 = y1*cosX - z1*sinX;
+  let z2 = y1*sinX + z1*cosX;
+
+  const W = canvas.width, H = canvas.height;
+  const cx = W/2, cy = H/2;
+  const perspective = 500 / (500 + z2 * zoom * 0.2);
+  return [cx + x2 * zoom * perspective, cy - y2 * zoom * perspective, z2];
+}
+
+function drawArrow(from3, to3, color, label, width=2.5) {
+  const f = project(from3);
+  const t = project(to3);
+  const dx = t[0]-f[0], dy = t[1]-f[1];
+  const len = Math.sqrt(dx*dx+dy*dy);
+  if (len < 1) return;
+
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = width;
+  ctx.globalAlpha = 0.92;
+
+  ctx.beginPath();
+  ctx.moveTo(f[0], f[1]);
+  ctx.lineTo(t[0], t[1]);
+  ctx.stroke();
+
+  // Arrowhead
+  const angle = Math.atan2(dy, dx);
+  const hs = 10;
+  ctx.beginPath();
+  ctx.moveTo(t[0], t[1]);
+  ctx.lineTo(t[0] - hs*Math.cos(angle-0.4), t[1] - hs*Math.sin(angle-0.4));
+  ctx.lineTo(t[0] - hs*Math.cos(angle+0.4), t[1] - hs*Math.sin(angle+0.4));
+  ctx.closePath();
+  ctx.fill();
+
+  if (label) {
+    ctx.font = 'bold 13px Syne, sans-serif';
+    ctx.fillStyle = color;
+    ctx.globalAlpha = 1;
+    ctx.fillText(label, t[0]+8, t[1]-6);
+  }
+  ctx.restore();
+}
+
+function drawDashedLine(from3, to3, color) {
+  const f = project(from3);
+  const t = project(to3);
+  ctx.save();
+  ctx.setLineDash([4, 4]);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1;
+  ctx.globalAlpha = 0.3;
+  ctx.beginPath();
+  ctx.moveTo(f[0], f[1]);
+  ctx.lineTo(t[0], t[1]);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawParallelogram(a, b, color) {
+  const o = project([0,0,0]);
+  const pa = project(a);
+  const pb = project(b);
+  const pc = project([a[0]+b[0], a[1]+b[1], a[2]+b[2]]);
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.globalAlpha = 0.12;
+  ctx.beginPath();
+  ctx.moveTo(o[0], o[1]);
+  ctx.lineTo(pa[0], pa[1]);
+  ctx.lineTo(pc[0], pc[1]);
+  ctx.lineTo(pb[0], pb[1]);
+  ctx.closePath();
+  ctx.fill();
+  ctx.globalAlpha = 0.25;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawAxis(dir, len, color, label) {
+  const v = dir.map(x => x * len);
+  drawArrow([0,0,0], v, color, label, 1);
+  const nv = dir.map(x => -x * len * 0.3);
+  const f = project([0,0,0]);
+  const t = project(nv);
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1;
+  ctx.globalAlpha = 0.2;
+  ctx.setLineDash([3,4]);
+  ctx.beginPath();
+  ctx.moveTo(f[0], f[1]);
+  ctx.lineTo(t[0], t[1]);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawAngleArc(a, b) {
+  const na = norm(a), nb = norm(b);
+  const o = project([0,0,0]);
+  const r = 28;
+  const steps = 24;
+  const pts = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const interp = na.map((v, k) => v*(1-t) + nb[k]*t);
+    const m = mag(interp);
+    if (m < 1e-9) continue;
+    const pt = project(interp.map(x => x * 0.9));
+    pts.push(pt);
+  }
+  if (pts.length < 2) return;
+  ctx.save();
+  ctx.strokeStyle = '#facc15';
+  ctx.lineWidth = 1.5;
+  ctx.globalAlpha = 0.6;
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0], pts[0][1]);
+  for (const p of pts) ctx.lineTo(p[0], p[1]);
+  ctx.stroke();
+  // θ label
+  const mid = pts[Math.floor(pts.length/2)];
+  ctx.font = '11px JetBrains Mono, monospace';
+  ctx.fillStyle = '#facc15';
+  ctx.globalAlpha = 0.9;
+  ctx.fillText('θ', mid[0]+4, mid[1]-4);
+  ctx.restore();
+}
+
+function draw() {
+  const W = canvas.width = canvas.offsetWidth * devicePixelRatio || 600;
+  const H = canvas.height = canvas.offsetHeight * devicePixelRatio || 500;
+  canvas.style.width = '100%';
+
+  ctx.clearRect(0, 0, W, H);
+
+  const {a, b} = getVecs();
+  const axb = cross(a, b);
+  const scale = 0.55;
+
+  // Draw axes
+  drawAxis([1,0,0], 5.5*scale, '#334155', 'x');
+  drawAxis([0,1,0], 5.5*scale, '#334155', 'y');
+  drawAxis([0,0,1], 5.5*scale, '#334155', 'z');
+
+  // Parallelogram (the area!)
+  drawParallelogram(a.map(x=>x*scale), b.map(x=>x*scale), '#a3e635');
+
+  // Completion dashes
+  drawDashedLine(a.map(x=>x*scale), a.map((x,i)=>(x+b[i])*scale), '#f472b6');
+  drawDashedLine(b.map(x=>x*scale), a.map((x,i)=>(x+b[i])*scale), '#38bdf8');
+
+  // Angle arc
+  drawAngleArc(a, b);
+
+  // Vectors a and b
+  drawArrow([0,0,0], a.map(x=>x*scale), '#38bdf8', 'a');
+  drawArrow([0,0,0], b.map(x=>x*scale), '#f472b6', 'b');
+
+  // Cross product
+  const axb_s = axb.map(x=>x*scale);
+  const axb_m = mag(axb_s);
+  if (axb_m > 0.05) {
+    drawArrow([0,0,0], axb_s, '#a3e635', 'a×b', 3);
+  }
+
+  // Update UI
+  updateUI(a, b, axb);
+}
+
+function fmt(x) { return x.toFixed(2); }
+
+function updateUI(a, b, axb) {
+  ['x','y','z'].forEach(c => {
+    document.getElementById(`a${c}-v`).textContent = fmt(+document.getElementById(`a${c}`).value);
+    document.getElementById(`b${c}-v`).textContent = fmt(+document.getElementById(`b${c}`).value);
+  });
+
+  const ma = mag(a), mb = mag(b), maxb = mag(axb);
+  const cosT = (ma < 1e-9 || mb < 1e-9) ? 1 : dot(a,b)/(ma*mb);
+  const theta = Math.acos(Math.max(-1, Math.min(1, cosT)));
+  const sinT = Math.sin(theta);
+  const area = ma * mb * sinT;
+
+  document.getElementById('r-mag-a').textContent = fmt(ma);
+  document.getElementById('r-mag-b').textContent = fmt(mb);
+  document.getElementById('r-theta').textContent = (theta * 180/Math.PI).toFixed(1) + '°';
+  document.getElementById('r-area').textContent = fmt(area);
+  document.getElementById('r-axb').textContent = `(${fmt(axb[0])}, ${fmt(axb[1])}, ${fmt(axb[2])})`;
+  document.getElementById('angle-fill').style.width = (sinT * 100).toFixed(1) + '%';
+
+  document.getElementById('formula-result').textContent =
+    `= (${fmt(axb[0])}, ${fmt(axb[1])}, ${fmt(axb[2])})`;
+
+  // Dynamic insight
+  let msg = '';
+  const tDeg = theta * 180/Math.PI;
+  if (ma < 0.1 || mb < 0.1) {
+    msg = '<strong>Zero vector!</strong> The cross product is zero because one vector has no length.';
+  } else if (tDeg < 5 || tDeg > 175) {
+    msg = '<strong>Parallel vectors!</strong> sin(θ) ≈ 0, so a×b ≈ 0. Parallel vectors form no parallelogram — area = 0.';
+  } else if (Math.abs(tDeg - 90) < 8) {
+    msg = '<strong>Perpendicular vectors!</strong> sin(90°) = 1, so the cross product is at its <strong>maximum</strong>. The parallelogram area is maximised here.';
+  } else {
+    msg = `θ = ${tDeg.toFixed(1)}°, sin(θ) = ${sinT.toFixed(2)}. The <strong>green vector</strong> points perpendicular to the blue-pink plane. Its length = area of the parallelogram = <strong>${fmt(area)}</strong>.`;
+  }
+  document.getElementById('insight-box').innerHTML = msg;
+}
+
+// Wire up sliders
+['ax','ay','az','bx','by','bz'].forEach(id => {
+  document.getElementById(id).addEventListener('input', draw);
+});
+
+draw();
+// Gentle auto-rotate on load
+let autoRot = true;
+setTimeout(() => autoRot = false, 4000);
+function autoRotate() {
+  if (autoRot && !dragging) { rotY += 0.008; draw(); }
+  requestAnimationFrame(autoRotate);
+}
+autoRotate();
+</script>
+</body>
+</html>
